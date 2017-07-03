@@ -3,6 +3,8 @@ from scrapy.selector import Selector
 
 from proxy.items import yItem, ypItem
 
+import logging
+
 class yspider_page(Spider):
     name = "ytest_page"
     allowed_domains = ["yelp.com"]
@@ -10,6 +12,9 @@ class yspider_page(Spider):
     # "https://www.yelp.com/search?find_loc=Los+Angeles%2C+CA&cflt=afghani",
     "file:///home/junlinux/Desktop/temp/t2.html",
     ]
+
+    logger = logging.getLogger('scrapy.core.scraper')
+    logger.setLevel(30)
 
     custom_settings = {
     "ITEM_PIPELINES" : {'proxy.pipelines.MongoDBPipe_y1_page':1, },
@@ -26,7 +31,13 @@ class yspider_page(Spider):
     "MONGODB_COLLECTION_res" : "restaurants_from_page",
     "MONGODB_COLLECTION_reviews" : "reviews",
     "MONGODB_COLLECTION_writers" : "writers",
+
+
     }
+
+    def __init__(self):
+        self.logger = logging.getLogger("yspider_page")
+
 
     def parse(self, response):
         self.logger.info('Parse function called on %s', response.url)
@@ -58,7 +69,7 @@ class yspider_page(Spider):
         menu_link_check = Selector(response).xpath('//h3[@class="menu-preview-heading"]')
         #menu_link_check = Selector(response).xpath('//div/div/div/div/div/h3/a')
         if menu_link_check:
-            restaurant['menu_link'] = menu_link_check.xpath('a/@href').extract()
+            restaurant['menu_link'] = menu_link_check.xpath('a/@href').extract()[0]
         else:
             restaurant['menu_link'] = "None"
             missing_res = True
@@ -70,7 +81,7 @@ class yspider_page(Spider):
 
         if all_piclink_check:
             restaurant['all_piclink'] = Selector(response).xpath(
-            '//a[@class="see-more u-pull-right"]/@href').extract()
+            '//a[@class="see-more u-pull-right"]/@href').extract()[0]
             #item['all_piclink'] = all_piclink_check.xpath('@href').extract()[0]
         else:
             if Selector(response).xpath('//a[@class="see-more show-all-overlay"]'):
@@ -285,13 +296,15 @@ class yspider_page(Spider):
             # possible to appear in one page.
             review['writer_id'] = reviewer_id
             if 'review_id' not in writer:
-                writer['review_id'] = [review_id]
+                writer['review_id'] = [review_id,]
             else:
                 writer['review_id'].append(review_id)
 
             review['biz_id'] = biz_id
             if 'biz_id' not in writer:
-                writer['biz_id'] = biz_id
+                writer['biz_id'] = [biz_id,]
+            else:
+                writer['biz_id'].append(biz_id)
 
             review_writers.append(writer)
             reviews.append(review)
@@ -338,3 +351,6 @@ class yspider_page(Spider):
         #item['url'] = response.url
 
         yield item
+        self.logger.info('Parse function is completed with url:  %s', response.url)
+
+        

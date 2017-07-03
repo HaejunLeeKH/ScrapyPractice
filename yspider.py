@@ -31,6 +31,8 @@ class yspider(Spider):
 
     # Each spider need to use custom setting for pipeline#
     # to store data
+    def __init__(self):
+        self.logger = logging.getLogger("yspider")
 
 
     def parse(self, response):
@@ -162,8 +164,11 @@ class yspider(Spider):
             #print(item2)
             #print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
             cnt += 1
+
+
             yield item2
 
+        self.logger.info('Parse function is completed with url:  %s', response.url)
         """
         first = Selector(response).xpath(
         '//div[@class="search-result natural-search-result"]/div/div/div/div[@class="media-story"]')

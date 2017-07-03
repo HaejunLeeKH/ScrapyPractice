@@ -198,34 +198,50 @@ class MongoDBPipe_y1_page(object):
                 # if different, then record that url
                 if self.restaurant.find({"$and" : [{"biz_id":dict(item)['restaurant']['biz_id']} , {"url":dict(item)['restaurant']['url']}]}).count() < 1:
                     self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"Duplicates" : dict(item)['restaurant']['url']} } )
+                else:
+                    # if not a duplicate,
+                    # update reviews(review_ids) and review_writers(reviewer_ids)
+                    for rv in dict(item)['restaurant']['reviews']:
+                        self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"reviews" : rv } } )
 
-                #update reviews(review_ids) and review_writers(reviewer_ids)
-                for rv in dict(item)['restaurant']['reviews']:
-                    self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"reviews" : rv } } )
+                    for wr in dict(item)['restaurant']['review_writers']:
+                        self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"review_writers" : wr } } )
 
-                for wr in dict(item)['restaurant']['review_writers']:
-                    self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"review_writers" : wr } } )
-
-                #self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"reviews" : 'review_id_test2222222' } } )
-                #self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"review_writers" : 'writer_id_test2222222' } } )
+                    #self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"reviews" : 'review_id_test2222222' } } )
+                    #self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"review_writers" : 'writer_id_test2222222' } } )
 
 
+            # update reviews collection
             for x in dict(item)['reviews']:
 
                 if self.review.find({'review_id': x['review_id']}).count() < 1:
                     self.review.update({'review_id': x['review_id']}, x, upsert=True)
                 else:
                     #if self.restaurant.find({"$and" : [{"review_id":x['review_id']} , {"$or" : [ {"contents":x['contents']}, {"star":x['star']} ]}  ]}).count() < 1:
-                    #if self.restaurant.find({"$and" : [{"review_id": x['review_id']} , {"contents": x['contents']}, {"star": x['star']}  ]}).count() < 1:
-                    if self.review.find({"$and" : [{"review_id": x['review_id']} , {"contents": x['contents']}, {"star": "test"}  ]}).count() < 1:
+                    if self.review.find({"$and" : [{"review_id": x['review_id']} , {"contents": x['contents']}, {"star": x['star']}  ]}).count() < 1:
                         self.review.update({'review_id': x['review_id']}, {"$addToSet": {"Duplicate_ID" : x } } )
+                    #if self.review.find({"$and" : [{"review_id": x['review_id']} , {"contents": x['contents']}, {"star": "test"}  ]}).count() < 1:
 
 
-
-
+            # update writers collection
             for x in dict(item)['review_writers']:
-                self.writer.update({'reviewer_id': x['reviewer_id']}, x, upsert=True)
+
+                if self.writer.find({'reviewer_id': x['reviewer_id']}).count() < 1:
+                    self.writer.update({'reviewer_id': x['reviewer_id']}, x, upsert=True)
+                else:
+                    if self.writer.find({"$and" : [{"reviewer_name": x['reviewer_name']} , {"reviewer_area": x['reviewer_area']}  ]}).count() < 1:
+                        self.writer.update({'reviewer_id': x['reviewer_id']}, {"$addToSet": {"Duplicates" : x } } )
+
+                    for bz in x['biz_id']:
+                        self.writer.update({'reviewer_id': x['reviewer_id']}, {"$addToSet": {"biz_id" : bz } } )
+
+                    for rv in x['review_id']:
+                        self.writer.update({'reviewer_id': x['reviewer_id']}, {"$addToSet": {"review_id" : rv } } )
+
+
 
             self.logger.info("Data is added to MongoDB! by page pipeline")
         #log.msg("Question added to MongoDB database!", level=log.DEBUG, spider=spider)
+
+
         return item
