@@ -56,7 +56,7 @@ class MongoDBPipe_y1(object):
         )
 
         self.db = self.client[spider.settings.get("MONGODB_DB_02")]
-        self.restaurant = self.db[spider.settings.get("MONGODB_COLLECTION_02")]
+        self.restaurant = self.db[spider.settings.get("MONGODB_COLLECTION_res")]
         self.logger.debug("Mongo DB collections are established")
 
 
@@ -97,7 +97,8 @@ class MongoDBPipe_y1(object):
                 # option 1: store data as a duplicate
                 #self.restaurant.update({'biz_id': dict(item)['biz_id']}, {"$addToSet": {"Duplicates" : dict(item)} } )
                 #self.restaurant.update({'biz_id': dict(item)['biz_id']}, {"$inc": {"Duplicates" : 1 } } )
-                self.restaurant.update({'biz_id': dict(item)['biz_id']}, {"$addToSet": {"Duplicates" : dict(item)['url']} } )
+                if self.restaurant.find({"$and" : [{'biz_id': dict(item)['biz_id']} , {'url': dict(item)['url']} ] }).count() < 1:
+                    self.restaurant.update({'biz_id': dict(item)['biz_id']}, {"$addToSet": {"Duplicates" : dict(item)['url']} } )
 
             self.logger.info("Data is added to MongoDB!")
             #log.msg("Data is added to MongoDB!", level=log.DEBUG, spider=spider)
@@ -195,7 +196,7 @@ class MongoDBPipe_y1_page(object):
             else:
                 # if biz_id is already exist, then check if url is different.
                 # if different, then record that url
-                if self.restaurant.find({"$and" : [{"biz_id":"Uu4n5ygvb3Xx0q5LFFSYuw"} , {"url":dict(item)['restaurant']['url']}]}).count() < 1:
+                if self.restaurant.find({"$and" : [{"biz_id":dict(item)['restaurant']['biz_id']} , {"url":dict(item)['restaurant']['url']}]}).count() < 1:
                     self.restaurant.update({'biz_id': dict(item)['restaurant']['biz_id']}, {"$addToSet": {"Duplicates" : dict(item)['restaurant']['url']} } )
 
                 #update reviews(review_ids) and review_writers(reviewer_ids)
@@ -210,7 +211,18 @@ class MongoDBPipe_y1_page(object):
 
 
             for x in dict(item)['reviews']:
-                self.review.update({'review_id': x['review_id']}, x, upsert=True)
+
+                if self.review.find({'review_id': x['review_id']}).count() < 1:
+                    self.review.update({'review_id': x['review_id']}, x, upsert=True)
+                else:
+                    #if self.restaurant.find({"$and" : [{"review_id":x['review_id']} , {"$or" : [ {"contents":x['contents']}, {"star":x['star']} ]}  ]}).count() < 1:
+                    #if self.restaurant.find({"$and" : [{"review_id": x['review_id']} , {"contents": x['contents']}, {"star": x['star']}  ]}).count() < 1:
+                    if self.review.find({"$and" : [{"review_id": x['review_id']} , {"contents": x['contents']}, {"star": "test"}  ]}).count() < 1:
+                        self.review.update({'review_id': x['review_id']}, {"$addToSet": {"Duplicate_ID" : x } } )
+
+
+
+
             for x in dict(item)['review_writers']:
                 self.writer.update({'reviewer_id': x['reviewer_id']}, x, upsert=True)
 

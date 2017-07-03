@@ -84,8 +84,9 @@ class yspider(Spider):
             rate_check = r.xpath(
             'div/div/div/div[@class="media-story"]/div[@class="biz-rating biz-rating-large clearfix"]')
             if rate_check:
-                item2['star'] = rate_check.xpath(
-                'div/@title').extract()[0]
+                #item2['star'] = rate_check.xpath('div/@title').extract()[0]
+                star = rate_check.xpath('div/@title').extract()[0]
+                item2['star'] = star[:star.find("star")-1]
 
                 item2['number_of_reviews'] = rate_check.xpath(
                 'span[@class="review-count rating-qualifier"]/text()').extract()[0].replace("\n", "").strip(" ")
